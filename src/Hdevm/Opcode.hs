@@ -142,4 +142,5 @@ data Opcode = STOP
             | STATICCALL
             | REVERT
             | SELFDESTRUCT
-            deriving Show
+            | HALT
+            deriving (Eq, Show)

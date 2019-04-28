@@ -7,54 +7,52 @@ import           Data.Either
 import           Hdevm.Error
 import           Hdevm.Opcode
 
+-- | How many instruction counter to add
+--
+opcodeAddPCNo :: Opcode -> Int
+opcodeAddPCNo (PUSH1 _)  = 2
+opcodeAddPCNo (PUSH2 _)  = 3
+opcodeAddPCNo (PUSH3 _)  = 4
+opcodeAddPCNo (PUSH4 _)  = 5
+opcodeAddPCNo (PUSH5 _)  = 6
+opcodeAddPCNo (PUSH6 _)  = 7
+opcodeAddPCNo (PUSH7 _)  = 8
+opcodeAddPCNo (PUSH8 _)  = 9
+opcodeAddPCNo (PUSH9 _)  = 10
+opcodeAddPCNo (PUSH10 _) = 11
+opcodeAddPCNo (PUSH11 _) = 12
+opcodeAddPCNo (PUSH12 _) = 13
+opcodeAddPCNo (PUSH13 _) = 14
+opcodeAddPCNo (PUSH14 _) = 15
+opcodeAddPCNo (PUSH15 _) = 16
+opcodeAddPCNo (PUSH16 _) = 17
+opcodeAddPCNo (PUSH17 _) = 18
+opcodeAddPCNo (PUSH18 _) = 19
+opcodeAddPCNo (PUSH19 _) = 20
+opcodeAddPCNo (PUSH20 _) = 21
+opcodeAddPCNo (PUSH21 _) = 22
+opcodeAddPCNo (PUSH22 _) = 23
+opcodeAddPCNo (PUSH23 _) = 24
+opcodeAddPCNo (PUSH24 _) = 25
+opcodeAddPCNo (PUSH25 _) = 26
+opcodeAddPCNo (PUSH26 _) = 27
+opcodeAddPCNo (PUSH27 _) = 28
+opcodeAddPCNo (PUSH28 _) = 29
+opcodeAddPCNo (PUSH29 _) = 30
+opcodeAddPCNo (PUSH30 _) = 31
+opcodeAddPCNo (PUSH31 _) = 32
+opcodeAddPCNo _          = 1
+
 
 -- | Get Instruction Number X from the stack
 --
-instructionNo :: Int -> [Either DeError Opcode] -> [Either DeError Opcode]
+instructionNo :: Int -> [Opcode] -> [Opcode]
 instructionNo i = pc 0 i
-  where pc :: Int -> Int -> [Either DeError Opcode] -> [Either DeError Opcode]
+  where pc :: Int -> Int -> [Opcode] -> [Opcode]
         pc curI resI []         = []
         pc curI resI o@(x : xs) =
           if curI == resI then o
-          else case x of
-                 Right (PUSH1 _) -> pc (curI + 2) resI xs
-                 Right (PUSH2 _) -> pc (curI + 3) resI xs
-                 Right (PUSH3 _) -> pc (curI + 4) resI xs
-                 Right (PUSH4 _) -> pc (curI + 5) resI xs
-                 Right (PUSH5 _) -> pc (curI + 6) resI xs
-                 Right (PUSH6 _) -> pc (curI + 7) resI xs
-                 Right (PUSH7 _) -> pc (curI + 8) resI xs
-                 Right (PUSH8 _) -> pc (curI + 9) resI xs
-                 Right (PUSH9 _) -> pc (curI + 10) resI xs
-                 Right (PUSH10 _) -> pc (curI + 11) resI xs
-                 Right (PUSH11 _) -> pc (curI + 12) resI xs
-                 Right (PUSH12 _) -> pc (curI + 13) resI xs
-                 Right (PUSH13 _) -> pc (curI + 14) resI xs
-                 Right (PUSH14 _) -> pc (curI + 15) resI xs
-                 Right (PUSH15 _) -> pc (curI + 16) resI xs
-                 Right (PUSH16 _) -> pc (curI + 17) resI xs
-                 Right (PUSH17 _) -> pc (curI + 18) resI xs
-                 Right (PUSH18 _) -> pc (curI + 19) resI xs
-                 Right (PUSH19 _) -> pc (curI + 20) resI xs
-                 Right (PUSH20 _) -> pc (curI + 21) resI xs
-                 Right (PUSH21 _) -> pc (curI + 22) resI xs
-                 Right (PUSH22 _) -> pc (curI + 23) resI xs
-                 Right (PUSH23 _) -> pc (curI + 24) resI xs
-                 Right (PUSH24 _) -> pc (curI + 25) resI xs
-                 Right (PUSH25 _) -> pc (curI + 26) resI xs
-                 Right (PUSH26 _) -> pc (curI + 27) resI xs
-                 Right (PUSH27 _) -> pc (curI + 28) resI xs
-                 Right (PUSH28 _) -> pc (curI + 29) resI xs
-                 Right (PUSH29 _) -> pc (curI + 30) resI xs
-                 Right (PUSH30 _) -> pc (curI + 31) resI xs
-                 Right (PUSH31 _) -> pc (curI + 32) resI xs
-                 _ -> pc (curI + 1) resI xs
-
--- | Normalization
---
-normalizeBytecode :: String -> String
-normalizeBytecode = map toUpper
-
+          else pc (curI + (opcodeAddPCNo x)) resI xs
 
 -- | Converts bytecode to opcode
 --
@@ -193,7 +191,9 @@ bytecodeToOpcode "F4" _ = Right $ DELEGATECALL
 bytecodeToOpcode "FA" _ = Right $ STATICCALL
 bytecodeToOpcode "FD" _ = Right $ REVERT
 bytecodeToOpcode "FF" _ = Right $ SELFDESTRUCT
+bytecodeToOpcode "FE" _ = Right $ HALT
 bytecodeToOpcode a    _ = Left $ InvalidOpcode a
+
 
 -- | Parses the entire string
 --
@@ -235,3 +235,17 @@ parseBytecode (a : b : xs) = do
              Right (PUSH31 _) -> parseBytecode $ drop 62 xs
              Right (PUSH32 _) -> parseBytecode $ drop 64 xs
              _                -> parseBytecode xs)
+
+
+-- | Extracts out the 'metadata' Hash inside the contract
+-- https://blog.zeppelin.solutions/deconstructing-a-solidity-contract-part-vi-the-swarm-hash-70f069e22aef
+removeMetadataHash :: String -> String
+removeMetadataHash []                       = ""
+removeMetadataHash ('A': '1': '6': '5': xs) = ""
+removeMetadataHash (x: xs)                  = [x] ++ removeMetadataHash xs
+
+-- | Normalization
+--
+normalizeBytecode :: String -> String
+normalizeBytecode s = removeMetadataHash $ map toUpper s
+
